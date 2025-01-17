@@ -13,18 +13,6 @@ type JWT struct {
 	Signature string
 }
 
-func ParseEncodedJWTs(encodedJWTs []string) ([]JWT, error) {
-	jwts := make([]JWT, 0)
-	for _, encodedJWT := range encodedJWTs {
-		jwt, err := ParseEncodedJWT(encodedJWT)
-		if err != nil {
-			return jwts, err
-		}
-		jwts = append(jwts, jwt)
-	}
-	return jwts, nil
-}
-
 func ParseEncodedJWT(encodedJWT string) (JWT, error) {
 	jwt := JWT{}
 	parts := strings.Split(encodedJWT, ".")

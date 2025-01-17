@@ -76,12 +76,16 @@ func main() {
 initialCurlCommand:
 	curlCommand := RetrieveCurlCommand()
 	encodedJWTs := ExtractJWTs(curlCommand)
-	jwts, err := ParseEncodedJWTs(encodedJWTs)
-	AssertErrNil(err)
 	if len(encodedJWTs) == 0 {
 		fmt.Println("No JWTs found in cURL command.")
 		goto initialCurlCommand
+	} else if len(encodedJWTs) > 1 {
+		fmt.Println("Multiple JWTs found in cURL command.")
+		fmt.Println("This is currently not supported.")
+		fmt.Println("Continuing with the first one.")
 	}
+	jwt, err := ParseEncodedJWT(encodedJWTs[0])
+	AssertErrNil(err)
 	output := ExecuteCurlCommand(curlCommand)
 	outputOk := VerifyOutput(output)
 	if !outputOk {
