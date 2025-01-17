@@ -6,10 +6,11 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 )
 
-func DoAssertErrNil(err error) {
+func AssertErrNil(err error) {
 	if err != nil {
 		panic(err)
 	}
@@ -17,11 +18,18 @@ func DoAssertErrNil(err error) {
 
 func RetrieveCurlCommand() string {
 	writer := bufio.NewWriter(os.Stdout)
-	writer.WriteString("Enter CURL command (Accept with Ctrl-D): ")
+	writer.WriteString("Enter cURL command (accept with Ctrl-D): ")
 	writer.Flush()
 	data, err := io.ReadAll(os.Stdin)
-	DoAssertErrNil(err)
+	AssertErrNil(err)
 	return string(data)
+}
+
+func ExtractJWTs(input string) []string {
+	jwtPattern := `ey[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+`
+	re := regexp.MustCompile(jwtPattern)
+	matches := re.FindAllString(input, -1)
+	return matches
 }
 
 func ExecuteCurlCommand(curlCommand string) string {
@@ -40,13 +48,13 @@ func VerifyOutput(output string) bool {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	stdinPipe, err := cmd.StdinPipe()
-	DoAssertErrNil(err)
+	AssertErrNil(err)
 	err = cmd.Start()
-	DoAssertErrNil(err)
+	AssertErrNil(err)
 	_, err = stdinPipe.Write([]byte(output))
-	DoAssertErrNil(err)
+	AssertErrNil(err)
 	err = stdinPipe.Close()
-	DoAssertErrNil(err)
+	AssertErrNil(err)
 	cmd.Wait()
 ask:
 	writer := bufio.NewWriter(os.Stdout)
@@ -54,7 +62,7 @@ ask:
 	writer.Flush()
 	reader := bufio.NewReader(os.Stdin)
 	data, _, err := reader.ReadLine()
-	DoAssertErrNil(err)
+	AssertErrNil(err)
 	answer := strings.TrimSpace(string(data))
 	answer = strings.ToLower(answer)
 	if answer != "y" && answer != "n" {
@@ -64,8 +72,16 @@ ask:
 }
 
 func main() {
+	fmt.Println("To begin, you must provide a cURL command for a valid request.")
 initialCurlCommand:
 	curlCommand := RetrieveCurlCommand()
+	encodedJWTs := ExtractJWTs(curlCommand)
+	jwts, err := ParseEncodedJWTs(encodedJWTs)
+	AssertErrNil(err)
+	if len(encodedJWTs) == 0 {
+		fmt.Println("No JWTs found in cURL command.")
+		goto initialCurlCommand
+	}
 	output := ExecuteCurlCommand(curlCommand)
 	outputOk := VerifyOutput(output)
 	if !outputOk {
