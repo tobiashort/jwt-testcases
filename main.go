@@ -10,9 +10,9 @@ import (
 	"strings"
 )
 
-func AssertErrNil(err error) {
-	if err != nil {
-		panic(err)
+func AssertNil(val any) {
+	if val != nil {
+		panic(val)
 	}
 }
 
@@ -21,7 +21,7 @@ func RetrieveCurlCommand() string {
 	writer.WriteString("Enter cURL command (accept with Ctrl-D): ")
 	writer.Flush()
 	data, err := io.ReadAll(os.Stdin)
-	AssertErrNil(err)
+	AssertNil(err)
 	return string(data)
 }
 
@@ -48,13 +48,13 @@ func VerifyOutput(output string) bool {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	stdinPipe, err := cmd.StdinPipe()
-	AssertErrNil(err)
+	AssertNil(err)
 	err = cmd.Start()
-	AssertErrNil(err)
+	AssertNil(err)
 	_, err = stdinPipe.Write([]byte(output))
-	AssertErrNil(err)
+	AssertNil(err)
 	err = stdinPipe.Close()
-	AssertErrNil(err)
+	AssertNil(err)
 	cmd.Wait()
 ask:
 	writer := bufio.NewWriter(os.Stdout)
@@ -62,7 +62,7 @@ ask:
 	writer.Flush()
 	reader := bufio.NewReader(os.Stdin)
 	data, _, err := reader.ReadLine()
-	AssertErrNil(err)
+	AssertNil(err)
 	answer := strings.TrimSpace(string(data))
 	answer = strings.ToLower(answer)
 	if answer != "y" && answer != "n" {
@@ -73,22 +73,23 @@ ask:
 
 func main() {
 	fmt.Println("To begin, you must provide a cURL command for a valid request.")
-initialCurlCommand:
-	curlCommand := RetrieveCurlCommand()
-	encodedJWTs := ExtractJWTs(curlCommand)
-	if len(encodedJWTs) == 0 {
+originalCurlCommand:
+	originalCurlCommand := RetrieveCurlCommand()
+	originalEncodedJWTs := ExtractJWTs(originalCurlCommand)
+	if len(originalEncodedJWTs) == 0 {
 		fmt.Println("No JWTs found in cURL command.")
-		goto initialCurlCommand
-	} else if len(encodedJWTs) > 1 {
+		goto originalCurlCommand
+	} else if len(originalEncodedJWTs) > 1 {
 		fmt.Println("Multiple JWTs found in cURL command.")
 		fmt.Println("This is currently not supported.")
 		fmt.Println("Continuing with the first one.")
 	}
-	jwt, err := ParseEncodedJWT(encodedJWTs[0])
-	AssertErrNil(err)
-	output := ExecuteCurlCommand(curlCommand)
-	outputOk := VerifyOutput(output)
-	if !outputOk {
-		goto initialCurlCommand
+	originalJWT, err := DecodedJWT(originalEncodedJWTs[0])
+	AssertNil(err)
+	originalOutput := ExecuteCurlCommand(originalCurlCommand)
+	originalOutputOk := VerifyOutput(originalOutput)
+	if !originalOutputOk {
+		goto originalCurlCommand
 	}
+	CheckValidity(originalJWT)
 }
