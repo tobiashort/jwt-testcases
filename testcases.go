@@ -22,16 +22,16 @@ func (testCase TestCase) String() string {
 func CheckValidity(originalJWT JWT) TestCase {
 	var validFrom float64
 	var validTo float64
-	exp, expOk := originalJWT.Payload["exp"].(float64)
-	nbf, nbfOk := originalJWT.Payload["nbf"].(float64)
-	iat, iatOk := originalJWT.Payload["iat"].(float64)
+	exp, expOk := originalJWT.Payload.Get("exp")
+	nbf, nbfOk := originalJWT.Payload.Get("nbf")
+	iat, iatOk := originalJWT.Payload.Get("iat")
 	if expOk {
-		validTo = exp
+		validTo = exp.(float64)
 	}
 	if nbfOk {
-		validFrom = nbf
+		validFrom = nbf.(float64)
 	} else if iatOk {
-		validFrom = iat
+		validFrom = iat.(float64)
 	}
 	validity := validTo - validFrom
 	testCase := TestCase{}

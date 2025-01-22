@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/tobiashort/orderedmap"
 )
 
 type JWT struct {
-	Header    map[string]any
-	Payload   map[string]any
+	Header    *orderedmap.OrderedMap[string, any]
+	Payload   *orderedmap.OrderedMap[string, any]
 	Signature string
 }
 
@@ -19,8 +21,8 @@ func DecodedJWT(encodedJWT string) (JWT, error) {
 	if len(parts) != 3 {
 		return jwt, fmt.Errorf("Expected 3 parts delimited by a '.', but got %d", len(parts))
 	}
-	jwt.Header = make(map[string]any)
-	jwt.Payload = make(map[string]any)
+	jwt.Header = orderedmap.NewOrderedMap[string, any]()
+	jwt.Payload = orderedmap.NewOrderedMap[string, any]()
 	jwt.Signature = parts[2]
 	header, err := base64.RawURLEncoding.DecodeString(parts[0])
 	if err != nil {
