@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -91,5 +92,10 @@ originalCurlCommand:
 	if !originalOutputOk {
 		goto originalCurlCommand
 	}
-	CheckValidity(originalJWT)
+
+	testCases := make([]TestCase, 0)
+	testCases = append(testCases, CheckValidity(originalJWT))
+	atomJson, err := json.MarshalIndent(testCases, "", "  ")
+	AssertNil(err)
+	fmt.Println(atomJson)
 }

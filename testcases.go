@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -36,19 +37,27 @@ func CheckValidity(originalJWT JWT) TestCase {
 	validity := validTo - validFrom
 	testCase := TestCase{}
 	testCase.ID = "JWT.checkValidity"
-	testCase.Details = fmt.Sprintf("%s\n\n%s", originalJWT.Encode(), originalJWT.String())
+	details := strings.Builder{}
+	details.WriteString("JWT\n")
+	details.WriteString(originalJWT.Encode())
+	details.WriteString("\n\nDecoded\n")
+	details.WriteString(originalJWT.String())
 	if validFrom == 0.0 || validTo == 0.0 {
 		testCase.ResultStatus = ResultStatusFAIL
 		testCase.Result = `Either the claims "iat", "nbf" or "exp" are missing or invalid.`
-		goto done
+		testCase.Details = details.String()
+		fmt.Println(testCase)
+		return testCase
 	}
+	details.WriteString("\n\nValidity\n")
+	details.WriteString(fmt.Sprintf("%.0f - %.0f = %.0f", validTo, validFrom, validity))
 	testCase.Result = fmt.Sprintf("The JWT is valid for %v.", time.Duration(validity*float64(time.Second)))
+	testCase.Details = details.String()
 	if validity > 3600 {
 		testCase.ResultStatus = ResultStatusFAIL
 	} else {
 		testCase.ResultStatus = ResultStatusPASS
 	}
-done:
 	fmt.Println(testCase)
 	return testCase
 }
