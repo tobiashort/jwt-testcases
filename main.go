@@ -18,9 +18,7 @@ func AssertNil(val any) {
 }
 
 func RetrieveCurlCommand() string {
-	writer := bufio.NewWriter(os.Stdout)
-	writer.WriteString("Enter cURL command (accept with Ctrl-D): ")
-	writer.Flush()
+	fmt.Println("Please paste your cURL command below and press [Ctrl-D] to confirm:")
 	data, err := io.ReadAll(os.Stdin)
 	AssertNil(err)
 	return string(data)
@@ -45,6 +43,16 @@ func ExecuteCurlCommand(curlCommand string) string {
 }
 
 func VerifyOutput(output string) bool {
+	fmt.Print(`
+Your cURL command has been executed successfully.
+Please review the response to confirm whether it
+indicates success, meaning you received an
+authorized response.
+
+Press [Enter] to continue.
+`)
+	_, _, err := bufio.NewReader(os.Stdin).ReadLine()
+	AssertNil(err)
 	cmd := exec.Command("more")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -59,7 +67,7 @@ func VerifyOutput(output string) bool {
 	cmd.Wait()
 ask:
 	writer := bufio.NewWriter(os.Stdout)
-	writer.WriteString("Is the output as expected (y/n)? ")
+	writer.WriteString("Is the response as expected (y/n)? ")
 	writer.Flush()
 	reader := bufio.NewReader(os.Stdin)
 	data, _, err := reader.ReadLine()
@@ -72,18 +80,42 @@ ask:
 	return answer == "y"
 }
 
+func RetrieveCanaryToken() string {
+	fmt.Print(`
+Enter your canary token and press [Enter] to confirm,
+or skip by simply pressing [Enter]: `)
+	canary, err := bufio.NewReader(os.Stdin).ReadString('\n')
+	AssertNil(err)
+	return canary
+}
+
 func main() {
-	fmt.Println("To begin, you must provide a cURL command for a valid request.")
+	fmt.Print(`Welcome to jwt-testcases!
+
+This tool is designed to assist you with automated
+attacks on JSON Web Tokens (JWT).
+
+To get started, provide a cURL command for a valid
+request that includes a JWT. The response to this request
+should indicate success, meaning you must receive an
+authorized response. For example, you can copy the cURL
+command directly from Burp Suite by following these steps:
+Right-click on the request →  Select "Copy as curl command (bash)."
+
+`)
+
 originalCurlCommand:
 	originalCurlCommand := RetrieveCurlCommand()
 	originalEncodedJWTs := ExtractJWTs(originalCurlCommand)
 	if len(originalEncodedJWTs) == 0 {
-		fmt.Println("No JWTs found in cURL command.")
+		fmt.Println("The provided cURL command does not contain any JWT.")
 		goto originalCurlCommand
 	} else if len(originalEncodedJWTs) > 1 {
-		fmt.Println("Multiple JWTs found in cURL command.")
-		fmt.Println("This is currently not supported.")
-		fmt.Println("Continuing with the first one.")
+		fmt.Print(`
+The provided cURL command contains multiple JWTs.
+This is currently not supported.
+We will continue with the first one found.
+`)
 	}
 	originalEncodedJWT := originalEncodedJWTs[0]
 	originalJWT, err := DecodeJWT(originalEncodedJWT)
@@ -93,7 +125,22 @@ originalCurlCommand:
 	if !originalCurlCommandOutputOk {
 		goto originalCurlCommand
 	}
-
+	fmt.Print(`
+Would you like to provide a canary token?
+This is a unique string found only in authorized responses,
+which helps minimize false positives.
+Providing it is optional.
+`)
+canary:
+	canary := RetrieveCanaryToken()
+	if strings.Contains(originalCurlCommandOutput, canary) {
+		fmt.Print(`
+The provided canary token is not contained the response of
+the cURL command you have entered. Perhaps you have a typo.
+Please retry.
+`)
+		goto canary
+	}
 	testCases := make([]TestCase, 0)
 	testCases = append(testCases, CheckValidity(originalJWT))
 	testCases = append(testCases, CheckSignatureExclusionAttack(originalCurlCommand, originalCurlCommandOutput, originalEncodedJWT))
