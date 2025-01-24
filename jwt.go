@@ -15,7 +15,7 @@ type JWT struct {
 	Signature string
 }
 
-func DecodedJWT(encodedJWT string) (JWT, error) {
+func DecodeJWT(encodedJWT string) (JWT, error) {
 	jwt := JWT{}
 	parts := strings.Split(encodedJWT, ".")
 	if len(parts) != 3 {

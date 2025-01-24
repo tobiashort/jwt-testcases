@@ -56,7 +56,7 @@ func TestCheckValidity(t *testing.T) {
 		},
 	}
 	for _, example := range examples {
-		decodedJWT, err := DecodedJWT(example.EncodedJWT)
+		decodedJWT, err := DecodeJWT(example.EncodedJWT)
 		if err != nil {
 			t.Error(example.EncodedJWT, err)
 		}

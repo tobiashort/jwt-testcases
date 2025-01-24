@@ -85,17 +85,19 @@ originalCurlCommand:
 		fmt.Println("This is currently not supported.")
 		fmt.Println("Continuing with the first one.")
 	}
-	originalJWT, err := DecodedJWT(originalEncodedJWTs[0])
+	originalEncodedJWT := originalEncodedJWTs[0]
+	originalJWT, err := DecodeJWT(originalEncodedJWT)
 	AssertNil(err)
-	originalOutput := ExecuteCurlCommand(originalCurlCommand)
-	originalOutputOk := VerifyOutput(originalOutput)
-	if !originalOutputOk {
+	originalCurlCommandOutput := ExecuteCurlCommand(originalCurlCommand)
+	originalCurlCommandOutputOk := VerifyOutput(originalCurlCommandOutput)
+	if !originalCurlCommandOutputOk {
 		goto originalCurlCommand
 	}
 
 	testCases := make([]TestCase, 0)
 	testCases = append(testCases, CheckValidity(originalJWT))
+	testCases = append(testCases, CheckSignatureExclusionAttack(originalCurlCommand, originalCurlCommandOutput, originalEncodedJWT))
 	atomJson, err := json.MarshalIndent(testCases, "", "  ")
 	AssertNil(err)
-	fmt.Println(atomJson)
+	fmt.Println(string(atomJson))
 }

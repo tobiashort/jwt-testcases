@@ -10,9 +10,10 @@ const ResultStatusPASS = "PASS"
 const ResultStatusFAIL = "FAIL"
 
 type TestCase struct {
-	ID           string `json:"-"`
-	ResultStatus string `json:"resultstatus"`
+	ID           string `json:"id"`
+	Description  string `json:"description"`
 	Result       string `json:"result"`
+	ResultStatus string `json:"resultstatus"`
 	Details      string `json:"details"`
 }
 
@@ -21,6 +22,9 @@ func (testCase TestCase) String() string {
 }
 
 func CheckValidity(originalJWT JWT) TestCase {
+	testCase := TestCase{}
+	testCase.ID = "JWT.checkValidity"
+	testCase.Description = "How long is the token valid?"
 	var validFrom float64
 	var validTo float64
 	exp, expOk := originalJWT.Payload.Get("exp")
@@ -35,8 +39,6 @@ func CheckValidity(originalJWT JWT) TestCase {
 		validFrom = iat.(float64)
 	}
 	validity := validTo - validFrom
-	testCase := TestCase{}
-	testCase.ID = "JWT.checkValidity"
 	details := strings.Builder{}
 	details.WriteString("JWT\n")
 	details.WriteString(originalJWT.Encode())
@@ -56,6 +58,34 @@ func CheckValidity(originalJWT JWT) TestCase {
 	if validity > 3600 {
 		testCase.ResultStatus = ResultStatusFAIL
 	} else {
+		testCase.ResultStatus = ResultStatusPASS
+	}
+	fmt.Println(testCase)
+	return testCase
+}
+
+func CheckSignatureExclusionAttack(originalCurlCommand, originalCurlCommandOutput string, originalEncodedJWT string) TestCase {
+	testCase := TestCase{}
+	testCase.ID = "JWT.checkSignatureExclusionAttack"
+	testCase.Description = "Is it possible to use tokens without a signature (signature exclusion attack)?"
+	jwt, err := DecodeJWT(originalEncodedJWT)
+	AssertNil(err)
+	jwt.Signature = ""
+	curlCommand := strings.ReplaceAll(originalCurlCommand, originalEncodedJWT, jwt.Encode())
+	curlCommandOutput := ExecuteCurlCommand(curlCommand)
+	similarity := CosineSimilarity(originalCurlCommandOutput, curlCommandOutput)
+	details := strings.Builder{}
+	details.WriteString("$ ")
+	details.WriteString(curlCommand)
+	details.WriteString("\n")
+	details.WriteString(curlCommandOutput)
+	testCase.Details = details.String()
+	testCase.Result = ""
+	if similarity > 0.9 {
+		testCase.Result = fmt.Sprintf("Yes. (similarity %f)", similarity)
+		testCase.ResultStatus = ResultStatusFAIL
+	} else {
+		testCase.Result = fmt.Sprintf("No. (similarity %f)", similarity)
 		testCase.ResultStatus = ResultStatusPASS
 	}
 	fmt.Println(testCase)
