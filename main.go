@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -67,7 +66,7 @@ Press [Enter] to continue.
 	cmd.Wait()
 ask:
 	writer := bufio.NewWriter(os.Stdout)
-	writer.WriteString("Is the response as expected (y/n)? ")
+	writer.WriteString("\nIs the response as expected (y/n)? ")
 	writer.Flush()
 	reader := bufio.NewReader(os.Stdin)
 	data, _, err := reader.ReadLine()
@@ -86,6 +85,8 @@ Enter your canary token and press [Enter] to confirm,
 or skip by simply pressing [Enter]: `)
 	canary, err := bufio.NewReader(os.Stdin).ReadString('\n')
 	AssertNil(err)
+	// strip newline at the end
+	canary = canary[:len(canary)-1]
 	return canary
 }
 
@@ -133,7 +134,7 @@ Providing it is optional.
 `)
 canary:
 	canary := RetrieveCanaryToken()
-	if strings.Contains(originalCurlCommandOutput, canary) {
+	if canary != "" && !strings.Contains(originalCurlCommandOutput, canary) {
 		fmt.Print(`
 The provided canary token is not contained the response of
 the cURL command you have entered. Perhaps you have a typo.
@@ -141,10 +142,16 @@ Please retry.
 `)
 		goto canary
 	}
-	testCases := make([]TestCase, 0)
-	testCases = append(testCases, CheckValidity(originalJWT))
-	testCases = append(testCases, CheckSignatureExclusionAttack(originalCurlCommand, originalCurlCommandOutput, originalEncodedJWT))
-	atomJson, err := json.MarshalIndent(testCases, "", "  ")
-	AssertNil(err)
-	fmt.Println(string(atomJson))
+
+	fmt.Print(`
+Performing test cases...
+`)
+
+	testCases := []TestCase{
+		CheckValidity(originalJWT),
+		CheckSignatureExclusionAttack(originalCurlCommand, originalCurlCommandOutput, originalEncodedJWT, canary),
+	}
+	for _, testCase := range testCases {
+		fmt.Printf("\n%s\n", testCase.String())
+	}
 }
