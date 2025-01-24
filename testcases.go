@@ -25,22 +25,52 @@ type TestCase struct {
 }
 
 func (testCase TestCase) String() string {
-	descriptionCol := []string{"Desciption"}
-	for _, line := range strings.Split(testCase.Description, "\n") {
+	columnWidth := 30
+
+	applyMaxWidthToText := func(text string) string {
+		if len(text) < columnWidth {
+			return text
+		}
+		builder := strings.Builder{}
+		line := strings.Builder{}
+		for _, word := range strings.Fields(text) {
+			if len(line.String())+len(word) < columnWidth {
+				if line.String() != "" {
+					line.WriteString(" ")
+				}
+				line.WriteString(word)
+			} else {
+				line.WriteString("\n")
+				builder.WriteString(line.String())
+				line = strings.Builder{}
+				line.WriteString(word)
+			}
+		}
+		builder.WriteString(line.String())
+
+		return builder.String()
+	}
+
+	description := applyMaxWidthToText(testCase.Description)
+	descriptionCol := []string{"Desciption", "-------------------------------"}
+	for _, line := range strings.Split(description, "\n") {
 		descriptionCol = append(descriptionCol, line)
 	}
 
-	expectedResultCol := []string{"Expected Result"}
-	for _, line := range strings.Split(testCase.ExpectedResult, "\n") {
+	expectedResult := applyMaxWidthToText(testCase.ExpectedResult)
+	expectedResultCol := []string{"Expected Result", "-------------------------------"}
+	for _, line := range strings.Split(expectedResult, "\n") {
 		expectedResultCol = append(expectedResultCol, line)
 	}
 
-	actualResultCol := []string{"Actual Result"}
-	for _, line := range strings.Split(testCase.ActualResult, "\n") {
+	actualResult := applyMaxWidthToText(testCase.ActualResult)
+	actualResultCol := []string{"Actual Result", "-------------------------------"}
+	for _, line := range strings.Split(actualResult, "\n") {
 		actualResultCol = append(actualResultCol, line)
 	}
 
-	resultStatusCol := []string{"PASS/FAIL", testCase.ResultStatus}
+	resultStatus := applyMaxWidthToText(testCase.ResultStatus)
+	resultStatusCol := []string{"PASS/FAIL", "-------------------------------", resultStatus}
 
 	maxRow := math.Max(float64(len(descriptionCol)), float64(len(expectedResultCol)))
 	maxRow = math.Max(maxRow, float64(len(actualResultCol)))
@@ -78,7 +108,7 @@ func (testCase TestCase) String() string {
 	}
 
 	buffer := new(bytes.Buffer)
-	writer := tabwriter.NewWriter(buffer, 0, 0, 2, ' ', 0)
+	writer := tabwriter.NewWriter(buffer, columnWidth+4, 0, 4, ' ', 0)
 	fmt.Fprint(writer, builder.String())
 	err := writer.Flush()
 	AssertNil(err)
@@ -128,6 +158,7 @@ func CheckSignatureExclusionAttack(originalCurlCommand, originalCurlCommandOutpu
 	testCase := TestCase{}
 	testCase.ID = "JWT.checkSignatureExclusionAttack"
 	testCase.Description = "Is it possible to use tokens without a signature (signature exclusion attack)?"
+	testCase.ExpectedResult = "No."
 	jwt, err := DecodeJWT(originalEncodedJWT)
 	AssertNil(err)
 	jwt.Signature = ""

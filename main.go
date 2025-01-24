@@ -66,17 +66,17 @@ Press [Enter] to continue.
 	cmd.Wait()
 ask:
 	writer := bufio.NewWriter(os.Stdout)
-	writer.WriteString("\nIs the response as expected (y/n)? ")
+	writer.WriteString("\nIs the response as expected (Y/n)? ")
 	writer.Flush()
 	reader := bufio.NewReader(os.Stdin)
 	data, _, err := reader.ReadLine()
 	AssertNil(err)
 	answer := strings.TrimSpace(string(data))
 	answer = strings.ToLower(answer)
-	if answer != "y" && answer != "n" {
+	if answer != "" && answer != "y" && answer != "n" {
 		goto ask
 	}
-	return answer == "y"
+	return answer == "" || answer == "y"
 }
 
 func RetrieveCanaryToken() string {
